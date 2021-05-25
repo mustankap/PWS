@@ -2,20 +2,21 @@
 #include "Arduino.h"
 #include "DHT.h"
 #include "SFE_BMP180.h"
-#include <Sim800L.h>
-#include <ArduinoJson.h>
-
+#include "Sim800L.h"
+#include "ArduinoJson.h"
+#include <RTClib.h>
 // Pin Definitions
 #define AM2302_PIN_SIG 2
 #define SIM800L_SOFTWARESERIAL_PIN_TX 10
 #define SIM800L_SOFTWARESERIAL_PIN_RX 11
-
+#define DHTPIN A1
+#define DHTTYPE DHT11
 // Global variables and defines
 
 // object initialization
 DHT am2302(AM2302_PIN_SIG);
 SFE_BMP180 bmp180;
-StaticJsonBuffer<200> jsonBuffer;
+StaticJsonDocument<256> jsonBuffer;
 SoftwareSerial myserial(11, 10); // RX, TX
 #define BUFFER_RESERVE_MEMORY 2048
 
@@ -40,7 +41,7 @@ void setup()
         ; // wait for serial port to connect. Needed for native USB
     Serial.println("start");
     myserial.begin(9600);
-    DynamicJsonBuffer jsonBuffer;
+    DynamicJsonDocument jsonBuffer(1024);
     am2302.begin();
     //Initialize I2C device
     bmp180.begin();
@@ -86,13 +87,13 @@ void loop()
     Serial.print(F("\tTemperature: "));
     Serial.print(bmp180TempC, 1);
     Serial.println(F(" [°C]"));
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject &object = jsonBuffer.createObject();
+    StaticJsonDocument<256> jsonBuffer;
+    JsonObject object = jsonBuffer.createNestedObject();
 
-    object.set("deviceID", deviceID);
-    object.set("humidity", am2302Humidity);
-    object.set("temperature", am2302TempC);
-    object.set("timedate", t);
+    object["deviceID"] = deviceID;
+    object["humidity"] = am2302Humidity;
+    object["temperature"] = am2302TempC;
+    object["timedate"] = t;
 
     object.printTo(Serial);
     Serial.println(" ");

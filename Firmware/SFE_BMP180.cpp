@@ -1,8 +1,7 @@
 /*
 	SFE_BMP180.cpp
 	Bosch BMP180 pressure sensor library for the Arduino microcontroller
-	Mike Grusin, SparkFun Electronics
-
+	
 	Uses floating-point equations from the Weather Station Data Logger project
 	http://wmrx00.sourceforge.net/
 	http://wmrx00.sourceforge.net/Arduino/BMP085-Calcs.pdf
@@ -467,4 +466,3 @@ char SFE_BMP180::getError(void)
 {
 	return(_error);
 }
-
