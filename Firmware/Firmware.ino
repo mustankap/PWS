@@ -4,9 +4,9 @@
 #include "SFE_BMP180.h"
 #include "Sim800L.h"
 #include "ArduinoJson.h"
-//#include <HttpClient.h>
+#include <HttpClient.h>
 #include <Ethernet.h>
-//#include <EthernetClient.h>
+
 #include <RTClib.h>
 // Pin Definitions
 #define AM2302_PIN_SIG 2
@@ -78,6 +78,7 @@ void setup()
 // Main logic of your circuit. It defines the interaction between the components you selected. After setup, it runs over and over again, in an eternal loop.
 void loop()
 {
+  
     // AM2302 Humidity and Temperature Sensor - Test Code
     // Reading humidity in %
     float am2302Humidity = am2302.readHumidity();
@@ -90,6 +91,7 @@ void loop()
     Serial.print(am2302TempC);
     Serial.println(F(" [C]"));
     DateTime now = rtc.now();
+    EthernetClient c;
     // BMP180 - Barometric Pressure, Temperature, Altitude Sensor - Test Code
     // Read Altitude from barometric sensor, note that the sensor is 1m accurate
     double bmp180Alt = bmp180.altitude();
@@ -114,7 +116,7 @@ void loop()
 
     String json;
     serializeJson(object, json);
-    EthernetClient c;
+    
     c.println(F("GET {json} HTTP/1.0"));
 
     delay(4000);
