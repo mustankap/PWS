@@ -4,6 +4,9 @@
 #include "SFE_BMP180.h"
 #include "Sim800L.h"
 #include "ArduinoJson.h"
+//#include <HttpClient.h>
+#include <Ethernet.h>
+//#include <EthernetClient.h>
 #include <RTClib.h>
 // Pin Definitions
 #define AM2302_PIN_SIG 2
@@ -19,12 +22,14 @@ SFE_BMP180 bmp180;
 StaticJsonDocument<256> jsonBuffer;
 SoftwareSerial myserial(11, 10); // RX, TX
 #define BUFFER_RESERVE_MEMORY 2048
+char api[] = "";
 
 RTC_DS3231 rtc;
 DHT dht(DHTPIN, DHTTYPE);
 
 char t[32];
 char deviceID[12] = "MYTEST56";
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // define vars for testing menu
 const int timeout = 10000; //define timeout of 10 sec
@@ -41,18 +46,30 @@ void setup()
         ; // wait for serial port to connect. Needed for native USB
     Serial.println("start");
     myserial.begin(9600);
-    DynamicJsonDocument jsonBuffer(1024);
+
     am2302.begin();
     //Initialize I2C device
     bmp180.begin();
     menuOption = menu();
-
+    while (Ethernet.begin(mac) != 1)
+    {
+        Serial.println("Error getting IP address via DHCP, trying again...");
+        delay(15000);
+    }
     if (!rtc.begin())
     {
         Serial.println("Couldn't find RTC");
         while (1)
             ;
     }
+    EthernetClient client;
+    client.setTimeout(10000);
+    if (!client.connect(api, 80))
+    {
+        Serial.println(F("Connection failed"));
+        return;
+    }
+
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     //rtc.adjust(DateTime(2020, 02, 29, 17, 50, 40));
     delay(5000);
@@ -88,52 +105,24 @@ void loop()
     Serial.print(bmp180TempC, 1);
     Serial.println(F(" [°C]"));
     StaticJsonDocument<256> jsonBuffer;
-    JsonObject object = jsonBuffer.createNestedObject();
-
+    //JsonObject object = jsonBuffer.createNestedObject();
+    DynamicJsonDocument object(1024);
     object["deviceID"] = deviceID;
     object["humidity"] = am2302Humidity;
     object["temperature"] = am2302TempC;
     object["timedate"] = t;
 
-    object.printTo(Serial);
-    Serial.println(" ");
-    String sendtoserver;
-    object.prettyPrintTo(sendtoserver);
+    String json;
+    serializeJson(object, json);
+    EthernetClient c;
+    c.println(F("GET {json} HTTP/1.0"));
+
     delay(4000);
 
     if (millis() - time0 > timeout)
     {
         menuOption = menu();
     }
-
-    myserial.println("AT+HTTPPARA=\"URL\",\"http://192.xxxxxxxxxxxxxxxxxxxxxxxx.php\""); //Server address
-    delay(4000);
-    ShowSerialData();
-
-    myserial.println("AT+HTTPPARA=\"CONTENT\",\"application/json\"");
-    delay(4000);
-    ShowSerialData();
-
-    myserial.println("AT+HTTPDATA=" + String(sendtoserver.length()) + ",100000");
-    Serial.println(sendtoserver);
-    delay(6000);
-    ShowSerialData();
-
-    myserial.println(sendtoserver);
-    delay(6000);
-    ShowSerialData;
-
-    myserial.println("AT+HTTPACTION=1");
-    delay(6000);
-    ShowSerialData();
-
-    myserial.println("AT+HTTPREAD");
-    delay(6000);
-    ShowSerialData();
-
-    myserial.println("AT+HTTPTERM");
-    delay(10000);
-    ShowSerialData;
 }
 
 // Menu function for selecting the components to be tested
@@ -161,7 +150,7 @@ char menu()
             else if (c == '2')
                 Serial.println(F("Now Testing BMP180 - Barometric Pressure, Temperature, Altitude Sensor"));
             else if (c == '3')
-                gsm.println(F("Now Testing QuadBand GPRS-GSM SIM800L - note that this component doesn't have a test code"));
+                Serial.println(F("Now Testing QuadBand GPRS-GSM SIM800L - note that this component doesn't have a test code"));
             else
             {
                 Serial.println(F("illegal input!"));
